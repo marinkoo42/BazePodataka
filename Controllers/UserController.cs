@@ -88,20 +88,55 @@ public class UserController : ControllerBase
 
 
     [Route("followUser/{userId}/{followId}")]
-    [HttpPut]
+    [HttpPost]
     public async Task<IActionResult> followUser(string userId, string followId)
     {
-      
+
+
+       /* var followed = await _client.Cypher.Match("(usr1:User)", "(usr2:User)")
+                           .Where((User usr1) => usr1.Id == userId)
+                           .AndWhere((User usr2) => usr2.Id == followId)
+                           .With("usr1, usr2 , exists((usr1)<-[:Following]-(usr2)) as ret")
+                           //.Call("return exists((n) -[:Liked]->(:Post))")
+                           .Return(ret => ret.As<bool>()).ResultsAsync;
+
+        if (followed.Single()) //napravi bidirekcionu
+        {
+            await _client.Cypher.Match("(usr1:User)-[f:Following]->(usr2:User)")
+                         .Where((User usr1) => usr1.Id == userId)
+                         .AndWhere((User usr2) => usr2.Id == followId)
+                         .Delete("f")
+                         .Create("(usr1:User)<-[:Following]->(usr2:User)")
+                         .ExecuteWithoutResultsAsync();
+        }
+        else // samo zaprati
+        {*/
         await _client.Cypher.Match("(usr1:User)", "(usr2:User)")
                             .Where((User usr1) => usr1.Id == userId)
                             .AndWhere((User usr2) => usr2.Id == followId)
                             .Create("(usr1)-[r:Following]->(usr2)")
                             .ExecuteWithoutResultsAsync();
+            
+        //}
+
+
 
         
 
         return Ok();
        
+    }
+    [Route("unfollowUser/{userId}/{followId}")]
+    [HttpDelete]
+
+    public async Task<IActionResult> UnfollowUser(string userId,string followId)
+    {
+        await _client.Cypher.Match("(usr1:User)-[r:Following]->(usr2)")
+                            .Where((User usr1) => usr1.Id == userId)
+                            .AndWhere((User usr2)=>usr2.Id==followId)
+                            .Delete("r")
+                            .ExecuteWithoutResultsAsync();
+        return Ok("");
     }
 
     //match(us:User)-[Following]->(f:User) where(us.Id = "0") return count(f)
