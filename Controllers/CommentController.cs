@@ -63,8 +63,6 @@ namespace BazePodatakaProjekat.Controllers
         }
 
 
-
-        //edit comment
         [Route("editComment/{commentId}")] //samo ako je user kreirao comment 
         [HttpPut]
         public async Task<IActionResult> EditComment(string commentId, [FromBody] Comment comment)
@@ -78,11 +76,6 @@ namespace BazePodatakaProjekat.Controllers
                                         .ExecuteWithoutResultsAsync();
             return Ok();
         }
-
-
-
-
-        //getPostComments
 
         [Route("getPostComments/{postId}")] 
         [HttpGet]

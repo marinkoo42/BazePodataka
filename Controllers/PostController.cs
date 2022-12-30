@@ -33,7 +33,7 @@ public class PostController : ControllerBase
     public async Task<IActionResult> CreatePost(String userId, [FromBody] Post post)
     {
         post.Id = Guid.NewGuid();
-
+        post.DateTimeCreated= DateTime.Now;
 
 
         await _client.Cypher.Create("(d:Post $post)")
@@ -175,7 +175,6 @@ public class PostController : ControllerBase
         return Ok(likes.Count());
     }
 
-    //getLikesCount
-    //getLikes
+    
 }
 

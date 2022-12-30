@@ -15,6 +15,9 @@ public class User
 
     public string Email { get; set; } = string.Empty;
 
+    public int NumbersOfFollowers { get; set; } = 0;
+    public int NumbersOfFollowings { get; set; } = 0;
+
     //public List<Comment> Comments { get; set; }
 
 
