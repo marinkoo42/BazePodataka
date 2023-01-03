@@ -40,10 +40,16 @@ public class StoryController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteStory(string storyId)
     {
-        await _client.Cypher.Match("(usr:User)-[p:Published]->(pst:Post)")
-                            .Where((Post pst) => pst.Id.ToString(storyId) == storyId)
+
+        await _client.Cypher.Match("(:User)-[viewRel:Viewed]->(s:Story)")
+                          .Where((Story s) => s.Id.ToString() == storyId)
+                          .Delete("viewRel")
+                          .ExecuteWithoutResultsAsync();
+
+        await _client.Cypher.Match("(usr:User)-[p:Published]->(str:Story)")
+                            .Where((Story str) => str.Id.ToString() == storyId)
                             .Delete("p")
-                            .Delete("pst")
+                            .Delete("str")
                             .ExecuteWithoutResultsAsync();
         
         
@@ -51,7 +57,30 @@ public class StoryController : ControllerBase
 
     }
 
+    [Route("getAllStoryFromUser/{userId}")]
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Post>>> getAllPostsFromUser(string userId)
+    {
 
+        var storys = await _client.Cypher.Match("(u:User)-[r:Published]->(s:Story)")
+                                  .Where((User u) => u.Id.ToString() == userId)
+                                  .Return(s => s.As<Story>()).ResultsAsync;
+
+
+        return Ok(storys);
+    }
+    [Route("viewStory/{userId}/{storyId}")]
+    [HttpPost]
+    public async Task<IActionResult> viewStory(string userId, string storyId)
+    {
+        await _client.Cypher.Match("(usr1:User)", "(s:Story)")
+                              .Where((User usr1) => usr1.Id == userId)
+                              .AndWhere((Story s) => s.Id.ToString() == storyId)
+                              .Create("(usr1)-[v:Viewed]->(s)")
+                              .ExecuteWithoutResultsAsync();
+        
+        return Ok();
+    }
 
 
 

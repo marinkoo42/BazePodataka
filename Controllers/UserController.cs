@@ -1,6 +1,6 @@
 ﻿
 using BazePodatakaProjekat.Models;
-using BazePodatakaProjekat.Authentication;
+//using BazePodatakaProjekat.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Neo4j.Driver;
@@ -8,7 +8,7 @@ using Neo4jClient;
 using Neo4jClient.Cypher;
 using System.Web;
 //using Microsoft.AspNetCore.Identity;
-using Neo4j.AspNet.Identity;
+//using Neo4j.AspNet.Identity;
 //using Microsoft.AspNetCore.Identity;
 
 namespace BazePodatakaProjekat.Controllers;
