@@ -57,9 +57,9 @@ public class StoryController : ControllerBase
 
     }
 
-    [Route("getAllStoryFromUser/{userId}")]
+    [Route("getAllStoriesFromUser/{userId}")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Post>>> getAllPostsFromUser(string userId)
+    public async Task<ActionResult<IEnumerable<Post>>> getStoriesFromUser(string userId)
     {
 
         var storys = await _client.Cypher.Match("(u:User)-[r:Published]->(s:Story)")
@@ -80,6 +80,36 @@ public class StoryController : ControllerBase
                               .ExecuteWithoutResultsAsync();
         
         return Ok();
+    }
+
+
+    [Route("getFollowingsStories/{myId}")]
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Story>>> getFollowingsStories(string myId)
+    {
+
+        var followings = await _client.Cypher.Match("(d:User)-[Following]->(f:User)")
+                                              .Where((User d) => d.Id == my)
+                                              .Return(f => new {
+                                                  Id = f.As<User>().Id,
+                                              }).ResultsAsync;
+
+        IEnumerable<Story> allStories = Enumerable.Empty<Story>();
+
+        foreach (var following in followings)
+        {
+            var stories = await _client.Cypher.Match("(u:User)-[p:Published]->(s:Story)")
+                                     .Where((User u) => u.Id.ToString() == following.Id)
+
+                                     .Return(p => p.As<Story>())
+                                     .ResultsAsync;
+
+            allStories = allStories.Concat(stories);
+        }
+        var r = new Random();
+        allStories = allStories.OrderBy(x => r.Next());
+
+        return Ok(allStories);
     }
 
 

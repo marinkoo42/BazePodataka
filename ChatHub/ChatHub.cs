@@ -62,12 +62,20 @@ namespace BazePodatakaProjekat.ChatHub
                 }*/
 
         private readonly RedisSubscriber _subscriber;
+        private readonly IConnectionMultiplexer redis;
+        private readonly IDatabase redisDatabase;
 
-        public ChatHub(RedisSubscriber subscriber)
+        public ChatHub(IConnectionMultiplexer redis)
         {
-            _subscriber = subscriber;
+
+            _subscriber = new RedisSubscriber(redis);
         }
 
+
+        public ChatHub()
+        {
+
+        }
         public async Task Subscribe(string channel)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, channel);
@@ -107,5 +115,5 @@ namespace BazePodatakaProjekat.ChatHub
 
 
 
-}
+    }
 }

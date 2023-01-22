@@ -151,42 +151,30 @@ public class UserController : ControllerBase
     }
 
 
-    //mozda da vratimo samo User sa podacima korisnika
+    // samo User sa podacima korisnika
     [AllowAnonymous]
     [HttpPost]
     [Route("Login")]
-    public async Task<ActionResult<String>> Login([FromBody] Login log)
+    public async Task<ActionResult<User>> Login([FromBody] Login log)
     {
         if (ModelState.IsValid)
         {
             var user = await _userManager.FindByNameAsync(log.UserName);
             if (user != null && await _userManager.CheckPasswordAsync(user, log.Password))
             {
-                var userRoles = await _userManager.GetRolesAsync(user);
-                var uloga = userRoles.FirstOrDefault();
-                var authClaims = new List<Claim>
-                        {
-                            new Claim(ClaimTypes.Name, user.Name),
-                            new Claim(ClaimTypes.Surname, user.LastName),
-                            new Claim("userName", user.UserName),
-                            new Claim(ClaimTypes.Email, user.Email),
-                            new Claim(ClaimTypes.HomePhone, user.PhoneNumber),
-                            new Claim("userId", user.Id),
-                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                        };
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
-                var authSigninKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]));
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["JWT:ValidIssuer"],
-                    audience: _configuration["JWT:ValidAudience"],
-                    expires: DateTime.Now.AddDays(1),
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigninKey, SecurityAlgorithms.HmacSha256Signature)
-                    );
-                return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+
+                var korisnik = new User();
+                korisnik.Id = user.Id;
+                korisnik.Name = user.Name;
+                korisnik.LastName = user.LastName;
+                korisnik.UserName = user.UserName;
+                korisnik.Email = user.Email;
+                korisnik.Phone = user.PhoneNumber;
+                korisnik.NumbersOfFollowers = user.NumbersOfFollowers;
+                korisnik.NumbersOfFollowings = user.NumbersOfFollowings;
+                korisnik.ProfileDescription = user.ProfileDescription;
+                korisnik.ProfilePicture = user.ProfilePicture;
+                return Ok(korisnik);
             }
         }
         return BadRequest("Pogresan username ili password");
@@ -205,11 +193,15 @@ public class UserController : ControllerBase
         {
             applicationUser.ProfilePicture = kor.ProfilePicture;
             applicationUser.ProfileDescription= kor.ProfileDescription;
-            applicationUser.Name = kor.Name;
-            applicationUser.Email = kor.Email;
-            applicationUser.LastName = kor.LastName;
-            applicationUser.UserName = kor.UserName;
-            applicationUser.PhoneNumber = kor.Phone;
+            if (!string.IsNullOrWhiteSpace(kor.Name))
+            {
+                applicationUser.Name = kor.Name;
+            }
+            if (!string.IsNullOrWhiteSpace(kor.LastName))
+                applicationUser.LastName = kor.LastName;
+
+            if (!string.IsNullOrWhiteSpace(kor.Phone))
+                applicationUser.PhoneNumber = kor.Phone;
 
             if (ModelState.IsValid)
             {
@@ -236,15 +228,8 @@ public class UserController : ControllerBase
             return Ok(retKor);
         }
         else return BadRequest("Ne postoji korisnik sa ovim id-jem!");
-
-
-
-
-
-
-
-
     }
+
 
 
     //follow i unfollow zajedno
@@ -311,6 +296,18 @@ public class UserController : ControllerBase
     }
 
 
+    [Route("getUserByUsername/{userName}")]
+    [HttpGet]
+    public async Task<IActionResult> GetUserByUsername(string userName)
+    {
+        var users = await _client.Cypher.Match("(d:User)")
+        .Where((User d) => d.UserName == userName)
+        .Return(d => d.As<User>()).ResultsAsync; 
+        
+        return Ok(users.FirstOrDefault());
+
+
+    }
 
     [Route("getUserFollowings/{userId}")]
     [HttpGet]
@@ -321,7 +318,10 @@ public class UserController : ControllerBase
                                               .Return(f => new {
                                                   Id = f.As<User>().Id,
                                                   UserName = f.As<User>().UserName,
-                                                  Email = f.As<User>().Email
+                                                  Email = f.As<User>().Email,
+                                                  ProfilePicture = f.As<User>().ProfilePicture,
+                                                  ProfileDescription = f.As<User>().ProfileDescription
+
                                               }).ResultsAsync;
                                               //f.As<User>().UserName).ResultsAsync;//f.As<User>()).ResultsAsync;
 
@@ -350,7 +350,9 @@ public class UserController : ControllerBase
                                               .Return(f => new {
                                                   Id = f.As<User>().Id,
                                                   UserName = f.As<User>().UserName,
-                                                  Email = f.As<User>().Email
+                                                  Email = f.As<User>().Email,
+                                                  ProfilePicture = f.As<User>().ProfilePicture,
+                                                  ProfileDescription = f.As<User>().ProfileDescription
                                               }).ResultsAsync;
 
         return Ok(users);

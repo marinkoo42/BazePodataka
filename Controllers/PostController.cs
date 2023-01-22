@@ -11,12 +11,12 @@ using Neo4jClient;
 public class PostController : ControllerBase
 {
     private readonly IGraphClient _client;
-    private UserController _userController;
 
-    public PostController(IGraphClient client, UserController userController)
+
+    public PostController(IGraphClient client)
     {
         _client = client;
-        _userController = userController;
+
     }
 
     [Route("getAllPostsFromUser/{userId}")]
@@ -32,6 +32,10 @@ public class PostController : ControllerBase
         return Ok(posts);
     }
 
+   
+
+
+
     [Route("createPost/{userId}")]
     [HttpPost]
     public async Task<IActionResult> CreatePost(String userId, [FromBody] Post post)
@@ -39,6 +43,12 @@ public class PostController : ControllerBase
         post.Id = Guid.NewGuid();
         post.DateTimeCreated= DateTime.Now;
         post.CreatorId = userId;
+
+        var user = await _client.Cypher.Match("(d:User)")
+                                              .Where((User d) => d.Id == userId)
+                                              .Return(d => d.As<User>()).ResultsAsync;
+
+        post.CreatorUserName = user.FirstOrDefault().UserName;
 
         await _client.Cypher.Create("(d:Post $post)")
                            .WithParam("post", post)

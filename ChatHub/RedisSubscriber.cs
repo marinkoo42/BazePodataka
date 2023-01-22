@@ -5,11 +5,11 @@ namespace BazePodatakaProjekat.ChatHub
     public class RedisSubscriber
     {
         private readonly ISubscriber _sub;
-        private readonly ConnectionMultiplexer _redis;
+        private readonly IConnectionMultiplexer _redis;
 
-        public RedisSubscriber()
+        public RedisSubscriber(IConnectionMultiplexer redis)
         {
-            _redis = ConnectionMultiplexer.Connect("localhost:6379");
+            _redis = redis;//ConnectionMultiplexer.Connect("localhost:6379");
             _sub = _redis.GetSubscriber();
         }
 

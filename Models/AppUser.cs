@@ -19,5 +19,8 @@ namespace BazePodatakaProjekat.Models
 
         public string ProfileDescription { get; set; } = String.Empty;
 
+        public int NumbersOfFollowers { get; set; } = 0;
+
+        public int NumbersOfFollowings { get; set; } = 0;
     }
 }
