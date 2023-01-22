@@ -2,6 +2,7 @@
 using StackExchange.Redis;
 using static BazePodatakaProjekat.Chat.Room.Room;
 using BazePodatakaProjekat.Chat.Room;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BazePodatakaProjekat.Chat.ChatService
 {
@@ -19,13 +20,13 @@ namespace BazePodatakaProjekat.Chat.ChatService
 
 
 
-        public async Task<List<RoomMessage>> GetMessages(string pubId,string subId, int offset = 0, int size = 50)//(string roomId = "0", int offset = 0, int size = 50)
+        public async Task<List<RoomMessage>> GetMessages(string room, int offset = 0, int size = 50)//(string roomId = "0", int offset = 0, int size = 50)
         {
             
 
 
-            var roomKey = $"room:{pubId}:{subId}";
-            var roomExists = await _database.KeyExistsAsync(roomKey);
+            //var roomKey = $"room:{pubId}:{subId}";
+            var roomExists = await _database.KeyExistsAsync(room);
             var messages = new List<RoomMessage>();
 
             if (!roomExists)
@@ -34,7 +35,7 @@ namespace BazePodatakaProjekat.Chat.ChatService
             }
             else
             {
-                var values = await _database.SortedSetRangeByRankAsync(roomKey, offset, offset + size, Order.Descending);
+                var values = await _database.SortedSetRangeByRankAsync(room, offset, offset + size, Order.Ascending);
 
                 foreach (var valueRedisVal in values)
                 {
@@ -98,14 +99,14 @@ namespace BazePodatakaProjekat.Chat.ChatService
             return rooms;
         }
 
-      /*  public async Task SendMessage(UserDto user, ChatRoomMessage message)
+        public async Task SendMessage(string room, RoomMessage message)
         {
-            await _database.SetAddAsync("online_users", message.From);
-            var roomKey = $"room:{message.RoomId}";
+            var roomKey = room;
             await _database.SortedSetAddAsync(roomKey, JsonConvert.SerializeObject(message), (double)message.Date);
-            await PublishMessage("message", message);
-        }*/
-    
+            
+            //await PublishMessage("message", message);
+        }
+
 
     }
 }

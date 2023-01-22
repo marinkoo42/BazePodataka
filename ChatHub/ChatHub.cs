@@ -109,8 +109,9 @@ namespace BazePodatakaProjekat.ChatHub
         {
             await Clients.Group(roomName).SendAsync("message", message);
             IDatabase db = redis.GetDatabase();
-            string key = $"{roomName}:{DateTime.UtcNow.Ticks}";
+            string key = $"{roomName}";
             bool success = db.StringSet(key, message);
+
         }
 
 

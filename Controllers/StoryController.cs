@@ -89,7 +89,7 @@ public class StoryController : ControllerBase
     {
 
         var followings = await _client.Cypher.Match("(d:User)-[Following]->(f:User)")
-                                              .Where((User d) => d.Id == my)
+                                              .Where((User d) => d.Id == myId)
                                               .Return(f => new {
                                                   Id = f.As<User>().Id,
                                               }).ResultsAsync;

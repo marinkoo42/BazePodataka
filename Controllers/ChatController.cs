@@ -23,12 +23,19 @@ namespace BazePodatakaProjekat.Controllers
 
 
 
-        [Route("getMessages/{pubId}/{subId}")]
+        [Route("getMessages/{room}")]
         [HttpGet]
-        public async Task<List<RoomMessage>> GetMessages(string pubId,string subId)
+        public async Task<List<RoomMessage>> GetMessages(string room)
         {
-            return await _service.GetMessages(pubId, subId);
+            return await _service.GetMessages(room);
         }
-            
+
+        [Route("sendMessage/{room}")]
+        [HttpPost]
+        public async Task SendMessage(string room , [FromBody] RoomMessage message)
+        {
+            await _service.SendMessage(room,message);
+        }
+
     }
 }

@@ -3,6 +3,8 @@
 public class Story
 {
     public Guid Id { get; set; }
+
+    public string CreatorPicture { get; set; }
    
     public string Url { get; set; } = string.Empty;
 
