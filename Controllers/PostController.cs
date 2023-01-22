@@ -4,15 +4,19 @@ using BazePodatakaProjekat.Models;
 using Microsoft.AspNetCore.Mvc;
 using Neo4jClient;
 
+
+
 [ApiController]
 [Route("[controller]")]
 public class PostController : ControllerBase
 {
     private readonly IGraphClient _client;
+    private UserController _userController;
 
-    public PostController(IGraphClient client)
+    public PostController(IGraphClient client, UserController userController)
     {
         _client = client;
+        _userController = userController;
     }
 
     [Route("getAllPostsFromUser/{userId}")]
@@ -34,7 +38,7 @@ public class PostController : ControllerBase
     {
         post.Id = Guid.NewGuid();
         post.DateTimeCreated= DateTime.Now;
-
+        post.CreatorId = userId;
 
         await _client.Cypher.Create("(d:Post $post)")
                            .WithParam("post", post)
@@ -94,6 +98,7 @@ public class PostController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> UpdatePost(string postId, [FromBody] Post post)
     {
+
         await _client.Cypher.Match("(p:Post)")
                                     .Where((Post p) => p.Id.ToString() == postId)
                                     .Set("p=$post")
@@ -175,6 +180,43 @@ public class PostController : ControllerBase
         return Ok(likes.Count());
     }
 
-    
+
+
+    //vraca random rasporedjene postove followera koji su kreirani najkasnije pre 3 dana 
+    [Route("getFollowingsRecentPosts/{myId}")]
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Post>>> getFollowingsRecentPosts(string myId)
+    {
+
+        var followings = await _client.Cypher.Match("(d:User)-[Following]->(f:User)")
+                                              .Where((User d) => d.Id == myId)
+                                              .Return(f => new {
+                                                  Id = f.As<User>().Id,
+                                              }).ResultsAsync;
+
+        IEnumerable<Post> recent = Enumerable.Empty<Post>();
+        var date = DateTime.Now;
+        foreach (var following in followings)
+        {
+            var posts = await _client.Cypher.Match("(u:User)-[r:Created]->(p:Post)")
+                                     .Where((User u) => u.Id.ToString() == following.Id)
+                                     .AndWhere("datetime(p.DateTimeCreated) > datetime.realtime() - duration({days:3})")
+                                     .Return(p => p.As<Post>())
+                                     .Limit(2)
+                                     .ResultsAsync;
+
+            recent = recent.Concat(posts);
+        }
+        var r = new Random();    
+        recent = recent.OrderBy(x => r.Next());
+
+
+        return Ok(recent);
+
+    }
+
+
+
+
 }
 

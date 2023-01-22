@@ -1,19 +1,23 @@
-﻿//using Microsoft.AspNetCore.Identity;
-//using System.ComponentModel.DataAnnotations;
-//using Neo4j.AspNet.Identity;
-
-//namespace BazePodatakaProjekat.Models
-//{
-//    public class AppUser : IdentityUser
-//    {
+﻿
+using System.ComponentModel.DataAnnotations;
+using AspNetCore.Identity.Neo4j;
 
 
-//        [Required(ErrorMessage = "Polje ime je obavezno")]
-//        public string Name { get; set; } = String.Empty;
+namespace BazePodatakaProjekat.Models
+{
+    public class AppUser : Neo4jIdentityUser
+    {
+
+        [Required(ErrorMessage = "Polje ime je obavezno")]
+        public string Name { get; set; } = String.Empty;
 
 
-//        [Required(ErrorMessage = "Polje prezime je obavezno")]
-//        public string LastName { get; set; } = String.Empty;
+        [Required(ErrorMessage = "Polje prezime je obavezno")]
+        public string LastName { get; set; } = String.Empty;
 
-//    }
-//}
+        public string ProfilePicture { get; set; } = String.Empty;
+
+        public string ProfileDescription { get; set; } = String.Empty;
+
+    }
+}

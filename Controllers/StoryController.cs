@@ -33,7 +33,7 @@ public class StoryController : ControllerBase
                             .ExecuteWithoutResultsAsync();
 
 
-        return Ok("stojanee");
+        return Ok("");
 
     }
     [Route("deleteStory/{storyId}")]

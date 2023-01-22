@@ -1,15 +1,23 @@
 ﻿
+using BazePodatakaProjekat.Authentication;
 using BazePodatakaProjekat.Models;
-//using BazePodatakaProjekat.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+
 using Neo4j.Driver;
 using Neo4jClient;
 using Neo4jClient.Cypher;
+using System.ComponentModel.DataAnnotations;
 using System.Web;
-//using Microsoft.AspNetCore.Identity;
-//using Neo4j.AspNet.Identity;
-//using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace BazePodatakaProjekat.Controllers;
 [ApiController]
@@ -17,12 +25,15 @@ namespace BazePodatakaProjekat.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IGraphClient _client;
+    private readonly UserManager<AppUser> _userManager;
+    private IConfiguration _configuration;
 
-    
 
-    public UserController(IGraphClient client)
+    public UserController(IGraphClient client, UserManager<AppUser> userManager, IConfiguration configuration)
     {
         _client = client;
+        _userManager = userManager;
+        _configuration = configuration;
        
         
 
@@ -72,17 +83,17 @@ public class UserController : ControllerBase
 
         return Ok(users.LastOrDefault());
     }
-
+/*
     [Route("createUser")]
     [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] User user)
+    public async Task<IActionResult> CreateUser([FromBody] AppUser user)
     {
 
         string result = getMaxId().Result;
         int resultInt = Int32.Parse(result);
         resultInt += 1;
         result = resultInt.ToString();
-        user.Id = result;
+        //user.Id = result;
 
 
 
@@ -91,10 +102,152 @@ public class UserController : ControllerBase
                             .ExecuteWithoutResultsAsync();
 
         return Ok();
+    }*/
+
+
+
+    [AllowAnonymous]
+    [HttpPost]
+    [Route("Register")]
+    public async Task<IActionResult> Registration([FromBody] Register reg)
+    {
+
+        if (ModelState.IsValid)
+        {
+            var userExist = await _userManager.FindByNameAsync(reg.UserName);
+            if (userExist != null)
+                return BadRequest("Ovaj username je vec u upotrebi!");
+
+            var userEmail = await _userManager.FindByEmailAsync(reg.Email);
+            if (userEmail != null)
+                return BadRequest("Ovaj email je vec u upotrebi!");
+
+            var applicationUser = new  AppUser
+            {
+
+                Name = reg.Name,
+                Email = reg.Email,
+                LastName = reg.LastName,
+                UserName = reg.UserName,
+                PhoneNumber = reg.Phone
+            };
+
+
+            try
+            {
+                var result = await _userManager.CreateAsync(applicationUser, reg.Password);
+
+                return Ok(result);
+            }
+
+            catch (ValidationException)
+            {
+                return BadRequest("Sifra mora da sadrzi najmanje 6 karaktera, da sadrzi jedno veliko slovo, jedan broj i jedan specijalni znak!");
+            }
+        }
+        else
+            return BadRequest("Podaci nisu validni!");
+
     }
 
 
+    //mozda da vratimo samo User sa podacima korisnika
+    [AllowAnonymous]
+    [HttpPost]
+    [Route("Login")]
+    public async Task<ActionResult<String>> Login([FromBody] Login log)
+    {
+        if (ModelState.IsValid)
+        {
+            var user = await _userManager.FindByNameAsync(log.UserName);
+            if (user != null && await _userManager.CheckPasswordAsync(user, log.Password))
+            {
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var uloga = userRoles.FirstOrDefault();
+                var authClaims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name, user.Name),
+                            new Claim(ClaimTypes.Surname, user.LastName),
+                            new Claim("userName", user.UserName),
+                            new Claim(ClaimTypes.Email, user.Email),
+                            new Claim(ClaimTypes.HomePhone, user.PhoneNumber),
+                            new Claim("userId", user.Id),
+                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                        };
+                foreach (var userRole in userRoles)
+                {
+                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                }
+                var authSigninKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]));
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["JWT:ValidIssuer"],
+                    audience: _configuration["JWT:ValidAudience"],
+                    expires: DateTime.Now.AddDays(1),
+                    claims: authClaims,
+                    signingCredentials: new SigningCredentials(authSigninKey, SecurityAlgorithms.HmacSha256Signature)
+                    );
+                return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+            }
+        }
+        return BadRequest("Pogresan username ili password");
+    }
 
+
+    /*[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(Roles = "LogedIn, Admin")]*/
+    [HttpPut]
+    [Route("IzmeniKorisnika")]///{id}
+    public async Task<ActionResult<User>> EditUser([FromBody] User kor)
+    {
+        var applicationUser = await _userManager.FindByIdAsync(kor.Id);
+
+        if (applicationUser != null)
+        {
+            applicationUser.ProfilePicture = kor.ProfilePicture;
+            applicationUser.ProfileDescription= kor.ProfileDescription;
+            applicationUser.Name = kor.Name;
+            applicationUser.Email = kor.Email;
+            applicationUser.LastName = kor.LastName;
+            applicationUser.UserName = kor.UserName;
+            applicationUser.PhoneNumber = kor.Phone;
+
+            if (ModelState.IsValid)
+            {
+
+
+
+                await _userManager.UpdateAsync(applicationUser);
+
+
+            }
+            else
+                return BadRequest("Podaci nisu validni");
+
+            var retKor = new User
+            {
+                Id = applicationUser.Id.ToString(),
+                Name = applicationUser.Name.ToString(),
+                LastName = applicationUser.LastName.ToString(),
+                UserName = applicationUser.UserName.ToString(),
+                Phone = applicationUser.PhoneNumber.ToString(),
+                Email = applicationUser.Email.ToString()
+
+            };
+            return Ok(retKor);
+        }
+        else return BadRequest("Ne postoji korisnik sa ovim id-jem!");
+
+
+
+
+
+
+
+
+    }
+
+
+    //follow i unfollow zajedno
     [Route("followUser/{userId}/{followId}")]
     [HttpPut]
     public async Task<IActionResult> followUser(string userId, string followId)
@@ -140,10 +293,28 @@ public class UserController : ControllerBase
        
     }
 
+    //da user izbaci svog followera
+    [Route("removeMyFollower/{myId}/{followerId}")]
+    [HttpPut]
+    public async Task<IActionResult> removeMyFollower(string myId, string followerId)
+    {
+        await _client.Cypher.Match("(usr1:User)-[r:Following]->(usr2)")
+                          .Where((User usr1) => usr1.Id == followerId)
+                          .AndWhere((User usr2) => usr2.Id == myId)
+                          .Delete("r")
+                          .Set("usr2.NumbersOfFollowers = usr2.NumbersOfFollowers-1")
+                          .Set("usr1.NumbersOfFollowings = usr1.NumbersOfFollowings-1")
+                          .ExecuteWithoutResultsAsync();
+
+        return Ok(); 
+
+    }
+
+
 
     [Route("getUserFollowings/{userId}")]
     [HttpGet]
-    public async Task<IActionResult> GetUserFollowings(string userId)
+    public async Task<IEnumerable<object>> GetUserFollowings(string userId)
     {
         var users = await _client.Cypher.Match("(d:User)-[Following]->(f:User)")
                                               .Where((User d) => d.Id == userId)
@@ -154,7 +325,7 @@ public class UserController : ControllerBase
                                               }).ResultsAsync;
                                               //f.As<User>().UserName).ResultsAsync;//f.As<User>()).ResultsAsync;
 
-        return Ok(users);
+        return users;
     }
 
     [Route("getUserFollowingsCount/{userId}")]
@@ -198,60 +369,7 @@ public class UserController : ControllerBase
     }
 
 
-   /* [AllowAnonymous]
-    [HttpPost]
-    [Route("Register")]
-    public async Task<IActionResult> Registration([FromBody] Register reg)
-    {
 
-        if (ModelState.IsValid)
-        {
-            var userExist = await _userManager.FindByNameAsync(reg.UserName);
-            if (userExist != null)
-                return BadRequest("Ovaj username je vec u upotrebi!");
-
-            var userEmail = await _userManager.FindByEmailAsync(reg.Email);
-            if (userEmail != null)
-                return BadRequest("Ovaj email je vec u upotrebi!");
-
-            var applicationUser = new AppUser()
-            {
-                Name = reg.Name,
-                Email = reg.Email,
-                LastName = reg.LastName,
-                UserName = reg.UserName,
-                PhoneNumber = reg.Phone
-            };
-           *//* if (!await roleManager.RoleExistsAsync(UserRole.Admin))
-            {
-                await roleManager.CreateAsync(new IdentityRole(UserRole.Admin));
-            }
-
-            if (!await roleManager.RoleExistsAsync(UserRole.Moderator))
-            {
-                await roleManager.CreateAsync(new IdentityRole(UserRole.Moderator));
-            }
-            if (!await roleManager.RoleExistsAsync(UserRole.LogedIn))
-            {
-                await roleManager.CreateAsync(new IdentityRole(UserRole.LogedIn));
-            }*//*
-
-            try
-            {
-                var result = await _userManager.CreateAsync(applicationUser, reg.Password);
-                //await userManager.AddToRoleAsync(applicationUser, UserRole.LogedIn);
-                return Ok(result);
-            }
-
-            catch (Exception)
-            {
-                return BadRequest("Sifra mora da sadrzi najmanje 6 karaktera, da sadrzi jedno veliko slovo, jedan broj i jedan specijalni znak!");
-            }
-        }
-        else
-            return BadRequest("Podaci nisu validni!");
-
-    }*/
 
 
 }

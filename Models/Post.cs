@@ -4,7 +4,12 @@ namespace BazePodatakaProjekat.Models;
 
 public class Post
 {
+
+    
+
     public Guid Id { get; set; }
+
+    public string CreatorId { get; set; } = String.Empty;
 
     public int NumberOfLikes { get; set; }
 
